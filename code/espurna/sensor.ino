@@ -426,6 +426,15 @@ void _sensorLoad() {
     }
     #endif
 
+    #if HCSR04_SUPPORT
+    {
+        HCSR04Sensor * sensor = new HCSR04Sensor();
+        sensor->setTrigger(HCSR04_TRIGGER);
+        sensor->setEcho(HCSR04_ECHO);
+        _sensors.push_back(sensor);
+    }
+    #endif
+
     #if HLW8012_SUPPORT
     {
         HLW8012Sensor * sensor = new HLW8012Sensor();
@@ -480,6 +489,14 @@ void _sensorLoad() {
     {
         SI7021Sensor * sensor = new SI7021Sensor();
         sensor->setAddress(SI7021_ADDRESS);
+        _sensors.push_back(sensor);
+    }
+    #endif
+
+    #if TMP3X_SUPPORT
+    {
+        TMP3XSensor * sensor = new TMP3XSensor();
+        sensor->setType(TMP3X_TYPE);
         _sensors.push_back(sensor);
     }
     #endif

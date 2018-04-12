@@ -1,9 +1,9 @@
 // -----------------------------------------------------------------------------
-// Analog Sensor (maps to an analogRead)
-// Copyright (C) 2017-2018 by Xose Pérez <xose dot perez at gmail dot com>
+// TMP3X Temperature Analog Sensor
+// Copyright (C) 2018 by Xose Pérez <xose dot perez at gmail dot com>
 // -----------------------------------------------------------------------------
 
-#if SENSOR_SUPPORT && ANALOG_SUPPORT
+#if SENSOR_SUPPORT && TMP3X_SUPPORT
 
 #pragma once
 
@@ -14,7 +14,11 @@
 #include "Arduino.h"
 #include "BaseSensor.h"
 
-class AnalogSensor : public BaseSensor {
+#define TMP3X_TMP35                 35
+#define TMP3X_TMP36                 36
+#define TMP3X_TMP37                 37
+
+class TMP3XSensor : public BaseSensor {
 
     public:
 
@@ -22,9 +26,19 @@ class AnalogSensor : public BaseSensor {
         // Public
         // ---------------------------------------------------------------------
 
-        AnalogSensor(): BaseSensor() {
+        TMP3XSensor(): BaseSensor() {
             _count = 1;
-            _sensor_id = SENSOR_ANALOG_ID;
+            _sensor_id = SENSOR_TMP3X_ID;
+        }
+
+        void setType(unsigned char type) {
+            if (35 <= type && type <= 37) {
+              _type = type;
+            }
+        }
+
+        unsigned char getType() {
+            return _type;
         }
 
         // ---------------------------------------------------------------------
@@ -39,7 +53,9 @@ class AnalogSensor : public BaseSensor {
 
         // Descriptive name of the sensor
         String description() {
-            return String("ANALOG @ TOUT");
+            char buffer[14];
+            snprintf(buffer, sizeof(buffer), "TMP%d @ TOUT", _type);
+            return String(buffer);
         }
 
         // Descriptive name of the slot # index
@@ -54,17 +70,25 @@ class AnalogSensor : public BaseSensor {
 
         // Type for slot # index
         unsigned char type(unsigned char index) {
-            if (index == 0) return MAGNITUDE_ANALOG;
+            if (index == 0) return MAGNITUDE_TEMPERATURE;
             return MAGNITUDE_NONE;
         }
 
         // Current value for slot # index
         double value(unsigned char index) {
-            if (index == 0) return analogRead(0);
+            if (index == 0) {
+                double mV = 3300.0 * analogRead(0) / 1024.0;
+                if (_type == TMP3X_TMP35) return mV / 10.0;
+                if (_type == TMP3X_TMP36) return mV / 10.0 - 50.0;
+                if (_type == TMP3X_TMP37) return mV / 20.0;
+            }
             return 0;
         }
 
+    private:
+
+        unsigned char _type = TMP3X_TMP35;
 
 };
 
-#endif // SENSOR_SUPPORT && ANALOG_SUPPORT
+#endif // SENSOR_SUPPORT && TMP3X_SUPPORT

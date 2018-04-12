@@ -4,7 +4,8 @@ var maxNetworks;
 var maxSchedules;
 var messages = [];
 var free_size = 0;
-var webhost;
+
+var urls = {};
 
 var numChanged = 0;
 var numReboot = 0;
@@ -37,7 +38,8 @@ function sensorName(id) {
         "DHT", "Dallas", "Emon Analog", "Emon ADC121", "Emon ADS1X15",
         "HLW8012", "V9261F", "ECH1560", "Analog", "Digital",
         "Events", "PMSX003", "BMX280", "MHZ19", "SI7021",
-        "SHT3X I2C", "BH1750", "PZEM004T", "AM2320 I2C", "GUVAS12SD"
+        "SHT3X I2C", "BH1750", "PZEM004T", "AM2320 I2C", "GUVAS12SD",
+        "TMP3X", "HC-SR04"
     ];
     if (1 <= id && id <= names.length) {
         return names[id - 1];
@@ -51,7 +53,7 @@ function magnitudeType(type) {
         "Current", "Voltage", "Active Power", "Apparent Power",
         "Reactive Power", "Power Factor", "Energy", "Energy (delta)",
         "Analog", "Digital", "Events",
-        "PM1.0", "PM2.5", "PM10", "CO2", "Lux", "UV"
+        "PM1.0", "PM2.5", "PM10", "CO2", "Lux", "UV", "Distance"
     ];
     if (1 <= type && type <= types.length) {
         return types[type - 1];
@@ -322,7 +324,7 @@ function doUpgrade() {
         $.ajax({
 
             // Your server script to process the upload
-            url: webhost + "upgrade",
+            url: urls.upgrade.href,
             type: "POST",
 
             // Form data
@@ -466,7 +468,7 @@ function doUpdate() {
 }
 
 function doBackup() {
-    document.getElementById("downloader").src = webhost + "config";
+    document.getElementById("downloader").src = urls.config.href;
     return false;
 }
 
@@ -1291,28 +1293,40 @@ function hasChanged() {
 // Init & connect
 // -----------------------------------------------------------------------------
 
-function connect(host) {
+function initUrls(root) {
 
-    if (typeof host === "undefined") {
-        host = window.location.href.replace("#", "");
-    } else {
-        if (host.indexOf("http") !== 0) {
-            host = "http://" + host + "/";
-        }
-    }
-    if (host.indexOf("http") !== 0) { return; }
+    var paths = ["ws", "upgrade", "config"];
 
-    webhost = host;
-    var wshost = host.replace("http", "ws") + "ws";
+    urls["root"] = root;
+    paths.forEach(function(path) {
+        urls[path] = new URL(path, root);
+    });
 
+    urls.ws.protocol = "ws";
+    
+}
+
+function connectToURL(url) {
+    initUrls(url);
     if (websock) { websock.close(); }
-    websock = new WebSocket(wshost);
+    websock = new WebSocket(urls.ws.href);
     websock.onmessage = function(evt) {
         var data = getJson(evt.data.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t"));
         if (data) {
             processData(data);
         }
     };
+}
+
+function connect(host) {
+    if (!host.startsWith("http:") && !host.startsWith("https:")) {
+        host = "http://" + host;
+    }
+    connectToURL(new URL(host));
+}
+
+function connectToCurrentURL() {
+    connectToURL(new URL(window.location));
 }
 
 $(function() {
@@ -1358,6 +1372,8 @@ $(function() {
     $(document).on("change", "input", hasChanged);
     $(document).on("change", "select", hasChanged);
 
-    connect();
+    // don't autoconnect when opening from filesystem
+    if (window.location.protocol === "file:") { return; }
+    connectToCurrentURL();
 
 });
